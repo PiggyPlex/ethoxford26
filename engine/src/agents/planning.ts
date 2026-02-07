@@ -5,6 +5,7 @@ import { listFiles, readFile, writeFile } from "../tools/fileTools";
 import { ChatGoogleGenerativeAI } from "@langchain/google-genai";
 import { MultiServerMCPClient } from "@langchain/mcp-adapters";  
 import { resolve } from "node:path";
+import { getFashionLifestyleNews } from "../tools/FashionLifestyleNews";
 
 const llm = new ChatGoogleGenerativeAI({
   model: "gemini-2.5-flash",
@@ -38,5 +39,5 @@ const mcpTools = await client.getTools();
 
 export const planningAgent = createAgent({
   model: llm,
-  tools: [getWeather, webSearch, listFiles, readFile, writeFile, ...mcpTools],
+  tools: [getWeather, webSearch, listFiles, readFile, writeFile,getFashionLifestyleNews, ...mcpTools],
 });
