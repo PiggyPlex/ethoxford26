@@ -24,8 +24,7 @@ const invokeAgent = async (userInput: string) => {
 //   .catch(error => console.error(error));
 
 import sd from 'screenshot-desktop';
-import { writeFileSync } from "node:fs";
-
+import { writeFile } from "node:fs/promises";
 
 /**
  * Errors we explicitly model
