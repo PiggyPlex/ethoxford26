@@ -10,6 +10,21 @@ const llm = new ChatGoogleGenerativeAI({
   model: "gemini-2.0-flash",
 });
 
+// Helper to clean JSON from markdown code blocks
+const cleanJsonResponse = (response: string): string => {
+  let cleaned = response.trim();
+  // Remove markdown code blocks
+  if (cleaned.startsWith("```json")) {
+    cleaned = cleaned.slice(7);
+  } else if (cleaned.startsWith("```")) {
+    cleaned = cleaned.slice(3);
+  }
+  if (cleaned.endsWith("```")) {
+    cleaned = cleaned.slice(0, -3);
+  }
+  return cleaned.trim();
+};
+
 // Category descriptions for better LLM categorization
 const CATEGORY_DESCRIPTIONS: Record<InterestCategory, string> = {
   fashion: "Clothing, brands, style, accessories, luxury goods, sneakers, designers",
@@ -48,7 +63,7 @@ ${Object.entries(CATEGORY_DESCRIPTIONS)
   .map(([cat, desc]) => `- ${cat}: ${desc}`)
   .join("\n")}
 
-Return a JSON object with:
+Return ONLY a raw JSON object (no markdown, no code blocks) with:
 {
   "interest": "the specific interest/brand/topic extracted",
   "category": "one of the available categories",
@@ -64,7 +79,8 @@ If no clear interest can be extracted, return: {"interest": null}`,
               },
             ]);
 
-            const extraction = JSON.parse(response.content as string);
+            const cleanedResponse = cleanJsonResponse(response.content as string);
+            const extraction = JSON.parse(cleanedResponse);
 
             if (!extraction.interest) {
               return "No clear interest could be extracted from the activity.";
@@ -127,7 +143,7 @@ If no clear interest can be extracted, return: {"interest": null}`,
       )
     );
 
-    return Effect.runPromise(program);
+    return await Effect.runPromise(program);
   },
   {
     name: "add_user_interest",

@@ -12,9 +12,9 @@ import { createStage, runStage, chain } from './utils/agent_pipeline';
 import { initSocketServer } from './server/socket';
 import { initChatHandler, cleanupConversation } from './server/chat_handler';
 
-const CONTEXT_INTERVAL = Duration.minutes(0.5);
-const SHORT_TERM_PLANNER_INTERVAL = Duration.minutes(1);
-const LONG_TERM_PLANNER_INTERVAL = Duration.minutes(2);
+const CONTEXT_INTERVAL = Duration.minutes(1);
+const SHORT_TERM_PLANNER_INTERVAL = Duration.minutes(5);
+const LONG_TERM_PLANNER_INTERVAL = Duration.minutes(15);
 
 const CONTEXT_PROMPT = 'TASK: Summarise what the user is doing on their computer in-depth. Keep note of all brands/interests where available (e.g., song genres, fashion styles, tech stacks)\nINPUT: Use the screenshot tool to capture the current screen. Use the get windows tool to get current window and all open windows\' data.\nORDER: 1. Get windows, 2. Screenshot\nCONSTRAINTS: You MUST use the window and screenshot tools, then save your observations using the save_context_note tool. Use concise language for robot format (short; broken English)\nOUTPUT: None (use save_context_note to persist the information)';
 

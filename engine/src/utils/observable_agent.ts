@@ -63,11 +63,11 @@ const logAgentEvent = (event: AgentEvent): Effect.Effect<void> =>
         yield* Effect.log(`[Agent Step] Tool: ${event.action.tool}`);
         yield* Effect.log(`[Agent Step] Input: ${JSON.stringify(event.action.toolInput).slice(0, 200)}`);
         if (event.observation !== "pending...") {
-          yield* Effect.log(`[Agent Step] Observation: ${JSON.stringify(event.observation).slice(0, 200)}`);
+          yield* Effect.log(`[Agent Step] Observation:`, event.observation);
         }
         break;
       case "AgentFinish":
-        yield* Effect.log(`[Agent Finish] Output: ${JSON.stringify(event.output).slice(0, 200)}`);
+        yield* Effect.log(`[Agent Finish] Output:`, event.output);
         break;
       case "AgentError":
         yield* Effect.logError(`[Agent Error] ${String(event.error)}`);
