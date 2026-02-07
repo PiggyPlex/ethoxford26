@@ -19,6 +19,7 @@
     "@effect/io": "^0.41.2",
     "@langchain/core": "^1.1.19",
     "@langchain/google-genai": "^2.1.15",
+    "@langchain/langgraph": "^1.1.4",
     "@langchain/mcp-adapters": "^1.1.2",
     "@types/uuid": "^11.0.0",
     "effect": "^3.19.16",
