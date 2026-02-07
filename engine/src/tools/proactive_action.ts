@@ -30,3 +30,29 @@ export const saveProactiveActionTool = new DynamicStructuredTool({
     }
   },
 });
+
+export const fetchProactiveActionsTool = new DynamicStructuredTool({
+    name: "fetch_proactive_actions",
+    description: "Fetch recent proactive actions taken to assist the user. Use this to review what proactive assistance has been provided.",
+    schema: z.object({
+        limit: z.number().default(5).describe("Number of recent proactive actions to retrieve"),
+    }),
+    func: async ({ limit }) => {
+        try {
+        const actions = await ProactiveAction.find().sort({ createdAt: -1 }).limit(limit);
+        if (actions.length === 0) {
+            return "No proactive actions logged yet.";
+        }
+        return JSON.stringify(actions.map(a => ({
+            userContext: a.userContext,
+            actionType: a.actionType,
+            actionDescription: a.actionDescription,
+            toolsUsed: a.toolsUsed,
+            result: a.result,
+            createdAt: a.createdAt,
+        })));
+        } catch (error) {
+        return `Failed to fetch proactive actions: ${error}`;
+        }
+    },
+});

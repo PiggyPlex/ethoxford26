@@ -33,7 +33,7 @@ export const fetchContextNotesTool = new DynamicStructuredTool({
   name: "fetch_context_notes",
   description: "Fetch recent context notes about user activity. Use this to retrieve past observations about what the user has been doing on their computer.",
   schema: z.object({
-    limit: z.number().default(6).describe("Number of recent context notes to retrieve"),
+    limit: z.number().default(3).describe("Number of recent context notes to retrieve"),
   }),
   func: async ({ limit }) => {
     try {

@@ -1,44 +1,124 @@
-import { app, BrowserWindow } from "electron";
+import { app, BrowserWindow, ipcMain, shell } from "electron";
 import * as path from "path";
+import { io, Socket } from "socket.io-client";
+
+let mainWindow: BrowserWindow | null = null;
+let socket: Socket | null = null;
+let isConnected = false;
 
 function createWindow() {
-  // Create the browser window.
-  const mainWindow = new BrowserWindow({
-    height: 600,
+  mainWindow = new BrowserWindow({
+    width: 900,
+    height: 700,
     webPreferences: {
       preload: path.join(__dirname, "preload.js"),
+      contextIsolation: true,
+      nodeIntegration: false,
     },
-    width: 800,
   });
 
-  // and load the index.html of the app.
   mainWindow.loadFile(path.join(__dirname, "../index.html"));
+
+  mainWindow.on("closed", () => {
+    mainWindow = null;
+  });
 
   // Open the DevTools.
   mainWindow.webContents.openDevTools();
 }
 
-// This method will be called when Electron has finished
-// initialization and is ready to create browser windows.
-// Some APIs can only be used after this event occurs.
-app.whenReady().then(() => {
-  createWindow();
+function connectToSuggestionServer(serverUrl: string = "http://localhost:3001") {
+  if (socket?.connected) {
+    console.log("Already connected to suggestion server");
+    return;
+  }
 
-  app.on("activate", function () {
-    // On macOS it's common to re-create a window in the app when the
-    // dock icon is clicked and there are no other windows open.
-    if (BrowserWindow.getAllWindows().length === 0) createWindow();
+  socket = io(serverUrl, {
+    transports: ["websocket", "polling"],
+    reconnection: true,
+    reconnectionAttempts: 10,
+    reconnectionDelay: 1000,
   });
+
+  socket.on("connect", () => {
+    console.log("🔌 Connected to suggestion server");
+    isConnected = true;
+    mainWindow?.webContents.send("connection-status", true);
+  });
+
+  socket.on("disconnect", () => {
+    console.log("🔌 Disconnected from suggestion server");
+    isConnected = false;
+    mainWindow?.webContents.send("connection-status", false);
+  });
+
+  socket.on("suggestion", (suggestion: any) => {
+    console.log("📥 Received suggestion:", suggestion);
+    mainWindow?.webContents.send("suggestion", suggestion);
+  });
+
+  // Chat events
+  socket.on("chat:response", (message: any) => {
+    console.log("💬 Received chat response:", message);
+    mainWindow?.webContents.send("chat:response", message);
+  });
+
+  socket.on("chat:thinking", (event: any) => {
+    console.log("🧠 Received thinking:", event);
+    mainWindow?.webContents.send("chat:thinking", event);
+  });
+
+  socket.on("chat:tool", (event: any) => {
+    console.log("🔧 Received tool event:", event);
+    mainWindow?.webContents.send("chat:tool", event);
+  });
+
+  socket.on("chat:typing", (event: any) => {
+    mainWindow?.webContents.send("chat:typing", event);
+  });
+
+  socket.on("connect_error", (error) => {
+    console.error("❌ Connection error:", error.message);
+  });
+}
+
+// IPC Handlers
+ipcMain.handle("get-connection-status", () => {
+  return isConnected;
 });
 
-// Quit when all windows are closed, except on macOS. There, it's common
-// for applications and their menu bar to stay active until the user quits
-// explicitly with Cmd + Q.
-app.on("window-all-closed", () => {
-  if (process.platform !== "darwin") {
-    app.quit();
+ipcMain.on("open-external", (_event, url: string) => {
+  shell.openExternal(url);
+});
+
+ipcMain.on("dismiss-suggestion", (_event, timestamp: number) => {
+  console.log("Dismissed suggestion:", timestamp);
+});
+
+// Chat IPC handler
+ipcMain.on("chat:send", (_event, message: any) => {
+  console.log("📤 Sending chat message:", message);
+  if (socket?.connected) {
+    socket.emit("chat:message", message);
+  } else {
+    console.error("❌ Cannot send message: not connected");
   }
 });
 
-// In this file you can include the rest of your app"s specific main process
-// code. You can also put them in separate files and require them here.
+app.whenReady().then(() => {
+  createWindow();
+  connectToSuggestionServer();
+
+  app.on("activate", () => {
+    if (BrowserWindow.getAllWindows().length === 0) {
+      createWindow();
+    }
+  });
+});
+
+app.on("window-all-closed", () => {
+  if (process.platform !== "darwin") {
+    socket?.disconnect();
+    app.quit();
+  }
+});
