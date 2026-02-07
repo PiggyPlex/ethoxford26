@@ -1,0 +1,13 @@
+{
+  "devDependencies": {
+    "@types/node": "^25.2.1"
+  },
+  "dependencies": {
+    "@google/generative-ai": "^0.24.1",
+    "dotenv": "^17.2.4",
+    "effect": "^3.19.16",
+    "langchain": "^1.2.18",
+    "openai": "^6.18.0",
+    "zod": "^4.3.6"
+  }
+}

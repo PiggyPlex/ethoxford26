@@ -5,10 +5,10 @@ import { listFiles, readFile, writeFile } from "../tools/fileTools";
 import { fetchUserSummaryTool } from "../tools/user_summary";
 import { saveProactiveActionTool } from "../tools/proactive_action";
 import { ChatGoogleGenerativeAI } from "@langchain/google-genai";
-import { MultiServerMCPClient } from "@langchain/mcp-adapters";  
-
+import { MultiServerMCPClient } from "@langchain/mcp-adapters";
 import { resolve } from "node:path";
 import { suggestContentTool } from "tools/suggest_content";
+import { getFashionLifestyleNews } from "../tools/FashionLifestyleNews";
 
 const llm = new ChatGoogleGenerativeAI({
   model: "gemini-2.5-flash",
@@ -52,6 +52,7 @@ export const planningAgent = createAgent({
     fetchUserSummaryTool,
     saveProactiveActionTool,
     suggestContentTool,
+    getFashionLifestyleNews,
     ...mcpTools
   ],
 });
