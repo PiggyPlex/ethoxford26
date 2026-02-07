@@ -1,23 +1,20 @@
 import * as z from "zod";
 import { tool } from "langchain";
 import { Effect, pipe } from "effect";
-import dotenv from "dotenv";
 import { GoogleGenerativeAI } from "@google/generative-ai";
-
-dotenv.config();
 
 /** ─────────────────────────────────────────
  *  1. Gemini client setup
  * ───────────────────────────────────────── */
 
-const geminiApiKey = process.env.GEMINI_API_KEY;
+const geminiApiKey = process.env.GOOGLE_API_KEY;
 if (!geminiApiKey) {
-  throw new Error("GEMINI_API_KEY is not set in environment variables");
+  throw new Error("GOOGLE_API_KEY is not set in environment variables");
 }
 
 const genAI = new GoogleGenerativeAI(geminiApiKey);
 const model = genAI.getGenerativeModel({
-  model: "gemini-3-pro", // or another Gemini model you prefer
+  model: "gemini-2.0-flash", // or another Gemini model you prefer
 });
 
 /** ─────────────────────────────────────────
@@ -78,51 +75,30 @@ async function fetchFashionLifestyleNewsFromGNews(
 }
 
 /** ─────────────────────────────────────────
- *  3. User preferences (replace with your real user DB)
+ *  3. User preferences (single user configuration)
  * ───────────────────────────────────────── */
 
-type User = {
-  id: string;
-  name: string;
-  fashionPreferences: string[];
-  lifestylePreferences: string[];
-  priceRange?: string;
-  regions?: string[];
+const USER_PREFERENCES = {
+  name: "User",
+  fashionPreferences: ["streetwear", "sustainable", "indie designers"],
+  lifestylePreferences: ["urban", "eco-conscious", "minimalist"],
+  priceRange: "mid",
+  regions: ["Europe", "Japan"],
 };
-
-/**
- * TEMP: in-memory user store. Replace this with DB/API lookup.
- * Keep the User shape identical so the tool code doesn't change.
- */
-const mockUsers: User[] = [
-  {
-    id: "u123",
-    name: "Test User",
-    fashionPreferences: ["streetwear", "sustainable", "indie designers"],
-    lifestylePreferences: ["urban", "eco-conscious", "minimalist"],
-    priceRange: "mid",
-    regions: ["Europe", "Japan"],
-  },
-];
-
-async function getUserById(userId: string): Promise<User | null> {
-  const user = mockUsers.find((u) => u.id === userId);
-  return user ?? null;
-}
 
 /** ─────────────────────────────────────────
  *  4. Prompt builder: Gemini personalizes GNews results
  * ───────────────────────────────────────── */
 
-function buildPersonalizationPrompt(user: User, articles: NewsArticle[]): string {
+function buildPersonalizationPrompt(articles: NewsArticle[]): string {
   return `
 You are a fashion & lifestyle news assistant.
 
 USER PROFILE:
-- Fashion preferences: ${JSON.stringify(user.fashionPreferences)}
-- Lifestyle preferences: ${JSON.stringify(user.lifestylePreferences)}
-- Price range (if any): ${JSON.stringify(user.priceRange || null)}
-- Regions (if any): ${JSON.stringify(user.regions || [])}
+- Fashion preferences: ${JSON.stringify(USER_PREFERENCES.fashionPreferences)}
+- Lifestyle preferences: ${JSON.stringify(USER_PREFERENCES.lifestylePreferences)}
+- Price range: ${JSON.stringify(USER_PREFERENCES.priceRange)}
+- Regions: ${JSON.stringify(USER_PREFERENCES.regions)}
 
 YOU ARE GIVEN RAW NEWS ARTICLES (FROM A NEWS API), WITH FIELDS:
 - id
@@ -153,7 +129,7 @@ TASK:
 
 FORMAT YOUR RESPONSE LIKE THIS (PLAIN TEXT, HUMAN-READABLE):
 
-Personalized Fashion & Lifestyle News for <User Name>:
+Personalized Fashion & Lifestyle News:
 
 Relevant Articles:
 1. Title:...
@@ -175,27 +151,21 @@ Tailored Insights (if applicable):
  * ───────────────────────────────────────── */
 
 export const getFashionLifestyleNews = tool(
-  async ({ userId }) => {
+  async () => {
     const program = pipe(
       Effect.tryPromise({
         try: async () => {
-          // 1. Load user
-          const user = await getUserById(userId);
-          if (!user) {
-            throw new Error(`User with id "${userId}" not found`);
-          }
-
-          // 2. Fetch latest fashion/lifestyle news from GNews (REAL API)
+          // 1. Fetch latest fashion/lifestyle news from GNews
           const articles = await fetchFashionLifestyleNewsFromGNews(15);
 
           if (articles.length === 0) {
             throw new Error("No articles returned from GNews");
           }
 
-          // 3. Build Gemini prompt using user + articles
-          const prompt = buildPersonalizationPrompt(user, articles);
+          // 2. Build Gemini prompt using user preferences + articles
+          const prompt = buildPersonalizationPrompt(articles);
 
-          // 4. Call Gemini to personalize and structure the news for this user
+          // 3. Call Gemini to personalize and structure the news
           const result = await model.generateContent({
             contents: [
               {
@@ -210,14 +180,12 @@ export const getFashionLifestyleNews = tool(
             throw new Error("Empty response from Gemini");
           }
 
-          // 5. Return human-readable text (your agent/UI can display this)
+          // 4. Return human-readable text
           return responseText;
         },
         catch: (error) =>
           new Error(
-            `Fashion & lifestyle news (GNews + Gemini) failed: ${String(
-              error,
-            )}`,
+            `Fashion & lifestyle news (GNews + Gemini) failed: ${String(error)}`,
           ),
       }),
     );
@@ -227,9 +195,7 @@ export const getFashionLifestyleNews = tool(
   {
     name: "get_fashion_lifestyle_news",
     description:
-      "Fetches real-time fashion and lifestyle news from GNews and uses Gemini to personalize it to a user's niche.",
-    schema: z.object({
-      userId: z.string().describe("The ID of the user to fetch news for"),
-    }),
+      "Fetches real-time fashion and lifestyle news from GNews and uses Gemini to personalize it based on user preferences.",
+    schema: z.object({}),
   },
 );
