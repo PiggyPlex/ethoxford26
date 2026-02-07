@@ -23,7 +23,7 @@ OUTPUT: None (use save_user_summary to persist: currentActivity, recentActivitie
 
 const buildPlanningPrompt = (summaryContext: string): string => `TASK: Proactively assist user as summary-planning
 INPUT: ${summaryContext}
-PROCESSING: 1. fetch_user_summary to get latest context 2. Analyze what user needs 3. Use appropriate tools to help
+PROCESSING: 1. fetch_user_summary to get latest context 2. Analyze what user needs 3. Use appropriate tools to help 4. Whenever you have found something useful, let the user know using the suggest content tool
 TOOLS_PRIORITY: 
   - Meeting soon? → check calendar, prepare info
   - Researching topic? → web_search for relevant info  

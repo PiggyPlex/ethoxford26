@@ -1,6 +1,6 @@
 import { createAgent } from "langchain";
 import { getWeather } from "../tools/weather";
-import { webSearch } from "../tools/webSearch";
+import { webSearch, visitPage } from "../tools/webSearch";
 import { listFiles, readFile, writeFile } from "../tools/fileTools";
 import { fetchUserSummaryTool } from "../tools/user_summary";
 import { saveProactiveActionTool } from "../tools/proactive_action";
@@ -8,6 +8,7 @@ import { ChatGoogleGenerativeAI } from "@langchain/google-genai";
 import { MultiServerMCPClient } from "@langchain/mcp-adapters";  
 
 import { resolve } from "node:path";
+import { suggestContentTool } from "tools/suggest_content";
 
 const llm = new ChatGoogleGenerativeAI({
   model: "gemini-2.5-flash",
@@ -43,12 +44,14 @@ export const planningAgent = createAgent({
   model: llm,
   tools: [
     getWeather, 
-    webSearch, 
+    webSearch,
+    visitPage,
     listFiles, 
     readFile, 
     writeFile, 
     fetchUserSummaryTool,
     saveProactiveActionTool,
+    suggestContentTool,
     ...mcpTools
   ],
 });
