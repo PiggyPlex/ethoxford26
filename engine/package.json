@@ -21,8 +21,11 @@
     "@langchain/google-genai": "^2.1.15",
     "@langchain/mcp-adapters": "^1.1.2",
     "effect": "^3.19.16",
+    "get-windows": "^9.2.3",
     "langchain": "^1.2.18",
+    "mongoose": "^9.1.6",
     "playwright": "^1.58.2",
+    "robotjs": "^0.6.0",
     "screenshot-desktop": "^1.15.3",
     "zod": "^4.3.6"
   }

@@ -2,8 +2,11 @@ import { createAgent } from "langchain";
 import { getWeather } from "../tools/weather";
 import { webSearch } from "../tools/webSearch";
 import { listFiles, readFile, writeFile } from "../tools/fileTools";
+import { fetchUserSummaryTool } from "../tools/user_summary";
+import { saveProactiveActionTool } from "../tools/proactive_action";
 import { ChatGoogleGenerativeAI } from "@langchain/google-genai";
 import { MultiServerMCPClient } from "@langchain/mcp-adapters";  
+
 import { resolve } from "node:path";
 
 const llm = new ChatGoogleGenerativeAI({
@@ -38,5 +41,14 @@ const mcpTools = await client.getTools();
 
 export const planningAgent = createAgent({
   model: llm,
-  tools: [getWeather, webSearch, listFiles, readFile, writeFile, ...mcpTools],
+  tools: [
+    getWeather, 
+    webSearch, 
+    listFiles, 
+    readFile, 
+    writeFile, 
+    fetchUserSummaryTool,
+    saveProactiveActionTool,
+    ...mcpTools
+  ],
 });

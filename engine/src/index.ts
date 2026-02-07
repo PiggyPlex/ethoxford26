@@ -1,298 +1,151 @@
-import { Effect, pipe, Schema, Data, Console } from "effect";
+import { Effect, pipe, Schedule, Duration, Fiber } from "effect";
+import { screenshotContextAgent } from "agents/screenshot_context";
+import { summaryContextAgent } from "agents/summary_context_agent";
 import { planningAgent } from "agents/planning";
-import sd from 'screenshot-desktop';
-import { writeFile } from "node:fs/promises";
-import { resolve } from "node:path";
-import { exec } from "node:child_process";
-import { promisify } from "node:util";
+import { connectToDatabase } from './utils/mongodb';
+import { 
+  observeAgent,
+  type AgentEvent,
+  type AgentFinishEvent
+} from './utils/observable_agent';
+import { createStage, runStage, chain } from './utils/agent_pipeline';
 
-const execAsync = promisify(exec);
+const CONTEXT_INTERVAL = Duration.minutes(2);
+const SECOND_BRAIN_INTERVAL = Duration.minutes(10);
 
-// ============================================================================
-// Error Models - using Data.TaggedEnum for better DX
-// ============================================================================
+const CONTEXT_PROMPT = 'TASK: Summarise what the user is doing on their computer in-depth\nINPUT: Use the screenshot tool to capture the current screen. Use the get windows tool to get current window and all open windows\' data.\nORDER: 1. Get windows, 2. Screenshot\nCONSTRAINTS: You MUST use the window and screenshot tools, then save your observations using the save_context_note tool. Use concise language for robot format (short; broken English)\nOUTPUT: None (use save_context_note to persist the information)';
 
-class AgentInvocationError extends Data.TaggedError("AgentInvocationError")<{
-  readonly cause: unknown;
-}> {}
+const SUMMARY_PROMPT = `TASK: Analyze recent user activity and create comprehensive summary
+INPUT: Fetch recent context notes using fetch_context_notes tool
+PROCESSING: 1. Retrieve context notes 2. Identify patterns 3. Infer goals 4. Predict needs
+CONSTRAINTS: Must use fetch_context_notes first. Must save summary using save_user_summary tool. Use concise language
+OUTPUT: None (use save_user_summary to persist: currentActivity, recentActivities, inferredGoals, potentialNeeds, futureActions)`;
 
-class ScreenshotError extends Data.TaggedError("ScreenshotError")<{
-  readonly cause: unknown;
-}> {}
+const buildPlanningPrompt = (summaryContext: string): string => `TASK: Proactively assist user as summary-planning
+INPUT: ${summaryContext}
+PROCESSING: 1. fetch_user_summary to get latest context 2. Analyze what user needs 3. Use appropriate tools to help
+TOOLS_PRIORITY: 
+  - Meeting soon? → check calendar, prepare info
+  - Researching topic? → web_search for relevant info  
+  - Working on project? → check files, gather context
+  - Listening to music? → suggest playlist based on activity
+  - Weather-dependent plans? → get_weather
+CONSTRAINTS: Must fetch_user_summary first. Must save_proactive_action after helping. Do NOT interrupt user. Gather info silently.
+OUTPUT: Take 1-2 proactive actions. Save each action taken.`;
 
-class FileWriteError extends Data.TaggedError("FileWriteError")<{
-  readonly cause: unknown;
-  readonly path: string;
-}> {}
+// Pipeline stages
+const summaryStage = createStage<void, string>(
+  "SummaryAgent",
+  summaryContextAgent,
+  () => SUMMARY_PROMPT,
+  (result: AgentFinishEvent) => JSON.stringify(result.output)
+);
 
-class PythonPipelineError extends Data.TaggedError("PythonPipelineError")<{
-  readonly cause: unknown;
-  readonly stderr?: string;
-}> {}
+const planningStage = createStage<string, void>(
+  "PlanningAgent", 
+  planningAgent,
+  (summaryContext: string) => buildPlanningPrompt(summaryContext),
+  () => undefined
+);
 
-class JsonParseError extends Data.TaggedError("JsonParseError")<{
-  readonly cause: unknown;
-  readonly rawOutput: string;
-}> {}
+// Chained summary-planning pipeline: Summary → Planning
+const summaryPlanningPipeline = chain(summaryStage, planningStage);
 
-// ============================================================================
-// Domain Schemas
-// ============================================================================
-
-// Define your expected vision pipeline output schema
-const VisionResult = Schema.Struct({
-  detections: Schema.Array(
-    Schema.Struct({
-      label: Schema.String,
-      confidence: Schema.Number,
-      bbox: Schema.optional(
-        Schema.Struct({
-          x: Schema.Number,
-          y: Schema.Number,
-          width: Schema.Number,
-          height: Schema.Number,
-        })
-      ),
-    })
-  ),
-  summary: Schema.optional(Schema.String),
-  timestamp: Schema.optional(Schema.String),
-});
-
-type VisionResult = typeof VisionResult.Type;
-
-// ============================================================================
-// Service Layer - using Effect generators
-// ============================================================================
-
-/**
- * Invoke planning agent
- */
-const invokeAgent = (userInput: string) =>
+// Handler for logging agent events with colors
+const handleAgentEvent = (agentName: string) => (event: AgentEvent) =>
   Effect.gen(function* () {
-    yield* Effect.logInfo(`Invoking agent with input: ${userInput}`);
-    
-    const response = yield* Effect.tryPromise({
-      try: () =>
-        planningAgent.invoke({
-          messages: [{ role: "user", content: userInput }],
-        }),
-      catch: (cause) => new AgentInvocationError({ cause }),
-    });
-
-    yield* Effect.logDebug(`Agent response received`);
-    return response;
-  });
-
-/**
- * Take a screenshot
- */
-const takeScreenshot = Effect.gen(function* () {
-  yield* Effect.logInfo("Capturing screenshot...");
-  
-  const img = yield* Effect.tryPromise({
-    try: () => sd({ format: "png" }),
-    catch: (cause) => new ScreenshotError({ cause }),
-  });
-
-  yield* Effect.logInfo(`Screenshot captured: ${img.length} bytes`);
-  return img;
-});
-
-/**
- * Write screenshot to disk
- */
-const saveScreenshot = (path: string, img: Buffer) =>
-  Effect.gen(function* () {
-    yield* Effect.logInfo(`Writing screenshot to ${path}...`);
-    
-    yield* Effect.tryPromise({
-      try: () => writeFile(path, img),
-      catch: (cause) => new FileWriteError({ cause, path }),
-    });
-
-    yield* Effect.logInfo("Screenshot saved successfully");
-    return path;
-  });
-
-/**
- * Run the Python vision pipeline
- */
-const runVisionPipeline = (scriptPath: string) =>
-  Effect.gen(function* () {
-    yield* Effect.logInfo(`Executing Python pipeline: ${scriptPath}`);
-    
-    const { stdout, stderr } = yield* Effect.tryPromise({
-      try: () => execAsync(`python3 ${scriptPath}`),
-      catch: (cause) => new PythonPipelineError({ cause }),
-    });
-
-    if (stderr) {
-      yield* Effect.logWarning(`Python stderr: ${stderr}`);
+    const timestamp = new Date().toISOString();
+    switch (event._tag) {
+      case "AgentStep":
+        yield* Effect.log(`[${timestamp}] [${agentName}] 🔧 Tool: ${event.action.tool}`);
+        yield* Effect.log(`[${timestamp}] [${agentName}] 📥 Input: ${JSON.stringify(event.action.toolInput).slice(0, 200)}...`);
+        if (event.observation !== "pending...") {
+          yield* Effect.log(`[${timestamp}] [${agentName}] 📤 Observation:`, event.observation);
+        }
+        break;
+      case "AgentFinish":
+        yield* Effect.log(`[${timestamp}] [${agentName}] ✅ Completed: ${JSON.stringify(event.output).slice(0, 300)}`);
+        break;
+      case "AgentError":
+        yield* Effect.logError(`[${timestamp}] [${agentName}] ❌ Error: ${String(event.error)}`);
+        break;
     }
-
-    yield* Effect.logInfo("Python pipeline completed");
-    return stdout;
   });
 
-/**
- * Parse JSON output with schema validation
- */
-const parseVisionOutput = (rawOutput: string) =>
-  Effect.gen(function* () {
-    yield* Effect.logInfo("Parsing vision pipeline output...");
-    
-    // First, try to parse as JSON
-    const parsed = yield* Effect.tryPromise({
-      try: () => Promise.resolve(JSON.parse(rawOutput)),
-      catch: (cause) => new JsonParseError({ cause, rawOutput }),
-    });
-
-    // Then validate against schema
-    const validated = yield* Schema.decodeUnknown(VisionResult)(parsed, {
-      errors: "all",
-      onExcessProperty: "preserve",
-    }).pipe(
-      Effect.mapError(
-        (error) =>
-          new JsonParseError({
-            cause: error,
-            rawOutput,
-          })
-      )
-    );
-
-    yield* Effect.logInfo(
-      `Parsed ${validated.detections.length} detections`
-    );
-    return validated;
-  });
-
-// ============================================================================
-// Complete Pipeline - using generator style
-// ============================================================================
-
-const screenshotPipeline = Effect.gen(function* () {
-  yield* Effect.logInfo("=== Starting Screenshot Pipeline ===");
-
-  // Take screenshot
-  const img = yield* takeScreenshot;
-
-  // Wait 10 seconds
-  yield* Effect.sleep("10 seconds");
-
-  // Save to disk
-  const screenshotPath = resolve(__dirname, "screenshot.png");
-  yield* saveScreenshot(screenshotPath, img);
-
-  // Run vision pipeline
-  const scriptPath = resolve(__dirname, "screenshot_pipeline.py");
-  const rawOutput = yield* runVisionPipeline(scriptPath);
-
-  // Parse and validate output
-  const visionResult = yield* parseVisionOutput(rawOutput);
-
-  yield* Effect.logInfo("=== Pipeline Complete ===");
-  return visionResult;
-});
-
-// ============================================================================
-// Alternative: Pipe-based version (more functional)
-// ============================================================================
-
-const screenshotPipelinePipe = pipe(
-  takeScreenshot,
-  Effect.flatMap((img) =>
-    pipe(
-      saveScreenshot(resolve(__dirname, "screenshot.png"), img),
-      Effect.as(img)
-    )
-  ),
-  Effect.flatMap(() =>
-    runVisionPipeline(resolve(__dirname, "screenshot_pipeline.py"))
-  ),
-  Effect.flatMap(parseVisionOutput),
-  Effect.tap((result) =>
-    Effect.logInfo(`Found ${result.detections.length} detections`)
-  )
-);
-
-// ============================================================================
-// Error Recovery & Retry
-// ============================================================================
-
-import { Schedule } from "effect";
-
-const screenshotPipelineWithRetry = pipe(
-  screenshotPipeline,
-  Effect.retry(
-    Schedule.exponential("100 millis").pipe(
-      Schedule.intersect(Schedule.recurs(3))
-    )
-  ),
-  Effect.catchTags({
-    ScreenshotError: (error) =>
-      Effect.gen(function* () {
-        yield* Effect.logError("Screenshot failed, using fallback");
-        // Could return a default/mock result here
-        return Effect.fail(error);
-      }),
-    JsonParseError: (error) =>
-      Effect.gen(function* () {
-        yield* Effect.logError(
-          `Failed to parse JSON. Raw output:\n${error.rawOutput}`
-        );
-        // Could attempt alternative parsing strategies
-        return Effect.fail(error);
-      }),
-  })
-);
-
-// ============================================================================
-// Running the Pipeline
-// ============================================================================
-
-/**
- * Main execution with comprehensive error handling
- */
-const main = Effect.gen(function* () {
-  yield* Console.log("Starting application...");
-
-  const result = yield* screenshotPipeline;
-
-  yield* Console.log("\n=== Vision Pipeline Results ===");
-  yield* Console.log(`Detections: ${result.detections.length}`);
+// Run context agent with observable streaming
+const runContextAgentWithLogging = Effect.gen(function* () {
+  yield* Effect.log("🔍 Starting context capture...");
   
-  for (const detection of result.detections) {
-    yield* Console.log(
-      `  - ${detection.label} (${(detection.confidence * 100).toFixed(1)}%)`
-    );
-  }
-
-  if (result.summary) {
-    yield* Console.log(`\nSummary: ${result.summary}`);
-  }
-
+  const { steps, result } = yield* observeAgent(screenshotContextAgent, CONTEXT_PROMPT);
+  
+  yield* Effect.log(`📊 Context capture completed with ${steps.length} steps`);
   return result;
-});
-
-// Run with proper error handling
-const runnable = pipe(
-  main,
+}).pipe(
   Effect.catchAll((error) =>
     Effect.gen(function* () {
-      yield* Effect.logError("Pipeline failed with error:");
-      yield* Effect.logError(JSON.stringify(error, null, 2));
-      return Effect.fail(error);
+      yield* Effect.logError(`Context agent failed: ${error}`);
+      return null;
     })
   )
 );
 
-Effect.runPromise(runnable)
-  .then((result) => {
-    console.log("\n✅ Pipeline completed successfully");
-  })
-  .catch((error) => {
-    console.error("\n❌ Pipeline failed:", error);
-    process.exit(1);
-  });
+// Run summary-planning pipeline (summary → planning)
+const runSummaryPlanningPipeline = Effect.gen(function* () {
+  yield* Effect.log("🧠 Starting summary-planning pipeline...");
+  yield* Effect.log("   Phase 1: Generating user summary");
+  yield* Effect.log("   Phase 2: Proactive planning & assistance");
+  
+  const result = yield* summaryPlanningPipeline(undefined);
+  
+  yield* Effect.log(`🧠 Summary-planning completed - ${result.steps.length} total steps`);
+  return result;
+}).pipe(
+  Effect.catchAll((error) =>
+    Effect.gen(function* () {
+      yield* Effect.logError(`Summary-planning pipeline failed: ${error}`);
+      return null;
+    })
+  )
+);
+
+// Main program using Effect
+const program = Effect.gen(function* () {
+  // Connect to database
+  yield* connectToDatabase();
+  yield* Effect.log("✅ Database connected");
+
+  // Context capture task (every 2 mins)
+  const contextTask = pipe(
+    runContextAgentWithLogging,
+    Effect.tap(() => Effect.log("🔄 Context capture cycle completed")),
+    Effect.repeat(Schedule.spaced(CONTEXT_INTERVAL))
+  );
+
+  // Summary-planning task (every 10 mins) - runs summary then planning
+  const secondBrainTask = pipe(
+    runSummaryPlanningPipeline,
+    Effect.tap(() => Effect.log("🔄 Summary-planning cycle completed")),
+    Effect.repeat(Schedule.spaced(SECOND_BRAIN_INTERVAL))
+  );
+
+  // Fork both tasks to run concurrently in background
+  const contextFiber = yield* Effect.fork(contextTask);
+  const secondBrainFiber = yield* Effect.fork(secondBrainTask);
+
+  yield* Effect.log(`🚀 Background agents started`);
+  yield* Effect.log(`   📸 Context agent: every ${Duration.toMillis(CONTEXT_INTERVAL) / 60000} mins`);
+  yield* Effect.log(`   🧠 Summary-planning (summary→planning): every ${Duration.toMillis(SECOND_BRAIN_INTERVAL) / 60000} mins`);
+
+  // Keep fibers alive - wait for both (they run forever due to repeat)
+  yield* Fiber.join(secondBrainFiber);
+  yield* Fiber.join(contextFiber);
+});
+
+// Run the program
+Effect.runPromise(program).catch((error) => {
+  console.error("Fatal error:", error);
+  process.exit(1);
+});
+
+// Keep the process alive
+process.stdin.resume();
