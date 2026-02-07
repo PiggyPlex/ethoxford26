@@ -16,11 +16,13 @@
     "typescript": "^5.9.3"
   },
   "dependencies": {
+    "@effect/io": "^0.41.2",
     "@langchain/core": "^1.1.19",
     "@langchain/google-genai": "^2.1.15",
     "@langchain/mcp-adapters": "^1.1.2",
     "effect": "^3.19.16",
     "langchain": "^1.2.18",
+    "playwright": "^1.58.2",
     "screenshot-desktop": "^1.15.3",
     "zod": "^4.3.6"
   }

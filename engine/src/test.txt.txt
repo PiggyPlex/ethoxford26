@@ -1,0 +1,35 @@
+eco es £ ethoxford26 By
+| oO EXPLORER oop Ts index.ts M @ env ® vision_pipeline.py 4,U X
+\ ETHOXFORD26 RRO 64 engine > src > ® vision_pipeline.py > © main
+ze) > env 448 def main(): >" Aa ab, wk 10f168 =}. LY = X
+v engine e 452 # Initialize pipeline
+te > credentials 453 pipeline = ScreenshotSegmentationPipeline(
+> node modules 454 min_confidence=50.0,
+> mates 455 merge_threshold=15,
+S 456 enable_preprocessing=T rue
+is Y Sis . 457 )
+> agents 458
+Le > tools 459 # Process screenshot
+> types a screenshot_path = "screenshot.png” # Replace with your screenshot
+O .
+5 > utils 462 print ("Processing screenshot...")
+TS index.ts M 463 context = pipeline.process(screenshot_path)
+A 464
+465 # Display results
+_~ 466 print("\n" + "="80) A
+liga 467 print ("LAYOUT DESCRIPTION:") Bee
+UTNE 468 print ("'="+80)
+Qh {} package.json ARQ nrintleantavt lavant daccrintinan) ————= |
+@ README.md PROBLEMS @ OUTPUT DEBUGCONSOLE TERMINAL PORTS COMMENTS ty. A xX
+tsconfig.json Valid tokens found for account(s): normal | >Jbun.exe A\ |
+© gitattributes [INFO] Listing available tools >] zsh A
+[INFO] Available tools: ['SpotifyPlayback', 'SpotifySearch', 'SpotifyQueue', 'SpotifyGetInfo', 'SpotifyPlaylist'] a ail Sie
+
+© .gitignore
+
+(2)
+god > OUTLINE
+
+> TIMELINE
+
+x maint OC @o0A4 Ln 463, Col41 Spaces:4 UTF-8 LF {} Python 3.13.2 (.venv) ~ A\Laravel Pint — @Prettier
