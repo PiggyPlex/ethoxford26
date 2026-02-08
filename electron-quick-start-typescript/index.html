@@ -13,52 +13,59 @@
     />
     <link rel="stylesheet" href="./src/styles/suggestions.css" />
     <link rel="stylesheet" href="./src/styles/chat.css" />
+    <link rel="stylesheet" href="./src/styles/main.css">
   </head>
   <body>
+    <div class="titlebar interactive">
+      <p>PersonaOS</p>
+    </div>
+
     <div class="connection-status">
       <span class="status-dot" id="status-dot"></span>
       <span id="status-text">Disconnected</span>
     </div>
 
     <div class="tabs">
-      <button class="tab active" data-tab="chat">💬 Chat</button>
-      <button class="tab" data-tab="suggestions">✨ Suggestions</button>
+      <button class="tab" data-tab="chat">Feed</button>
+      <button class="tab active" data-tab="suggestions">Suggestions</button>
     </div>
 
-    <div id="chat-tab" class="tab-content active">
-      <div class="chat-container">
-        <div id="chat-messages" class="chat-messages">
-          <div class="chat-empty">
-            <div class="chat-empty-icon">💬</div>
-            <div class="chat-empty-title">Start a conversation</div>
-            <div class="chat-empty-subtitle">Ask me anything! I can help with web searches, calendar, weather, and more.</div>
+    <!-- Wrap tab content in a main landmark for semantics -->
+    <main id="app-main" role="main" aria-labelledby="app-title">
+      <div id="chat-tab" class="tab-content">
+        <div class="chat-container">
+          <div id="chat-messages" class="chat-messages">
+            <div class="chat-empty">
+              <div class="chat-empty-icon">💬</div>
+              <div class="chat-empty-title">Start a conversation</div>
+              <div class="chat-empty-subtitle">Ask me anything! I can help with web searches, calendar, weather, and more.</div>
+            </div>
           </div>
-        </div>
-        
-        <div class="chat-input-container">
-          <div class="chat-input-wrapper">
-            <textarea 
-              id="chat-input" 
-              class="chat-input" 
-              placeholder="Type a message..."
-              rows="1"
-            ></textarea>
-            <button id="chat-send-btn" class="chat-send-btn" disabled>
-              <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                <path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/>
-              </svg>
-            </button>
+          
+          <div class="chat-input-container">
+            <div class="chat-input-wrapper">
+              <textarea 
+                id="chat-input" 
+                class="chat-input" 
+                placeholder="Type a message..."
+                rows="1"
+              ></textarea>
+              <button id="chat-send-btn" class="chat-send-btn" disabled>
+                <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                  <path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/>
+                </svg>
+              </button>
+            </div>
           </div>
         </div>
       </div>
-    </div>
 
-    <div id="suggestions-tab" class="tab-content">
-      <h2>Suggestions</h2>
-      <div id="suggestions-container" class="suggestions-container">
-        <div class="empty-state">No suggestions yet. Waiting for updates...</div>
+      <div id="suggestions-tab" class="tab-content active">
+        <!-- mark as polite live region for assistive tech -->
+        <div id="suggestions-container" class="suggestions suggestions__list" aria-live="polite" aria-atomic="false">
+        </div>
       </div>
-    </div>
+    </main>
 
     <script src="./dist/renderer.js"></script>
   </body>

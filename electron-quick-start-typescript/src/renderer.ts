@@ -1,3 +1,62 @@
+// const interactive = document.getElementsByClassName("interactive");
+
+// // FOr all of them bind mouse events to enable interaction with the overlay
+// Array.from(interactive).forEach((element) => {
+//   element.addEventListener("mouseenter", () => {
+//     window.overlay.setInteractive(true);
+//   });
+  
+//   element.addEventListener("mouseleave", () => {
+//     window.overlay.setInteractive(false);
+//   });
+// });
+
+let isExpanded = false;
+
+const showChat = () => {
+  tabButtons.forEach((btn) => btn.classList.remove("active"));
+  tabContents.forEach((content) => content.classList.remove("active"));
+  
+  document.querySelector('[data-tab="chat"]')?.classList.add("active");
+  document.getElementById(`chat-tab`)?.classList.add("active");
+}
+
+const showSuggestions = () => {
+  tabButtons.forEach((btn) => btn.classList.remove("active"));
+  tabContents.forEach((content) => content.classList.remove("active"));
+  
+  document.querySelector('[data-tab="suggestions"]')?.classList.add("active");
+  document.getElementById(`suggestions-tab`)?.classList.add("active");
+}
+
+document.body.onmouseenter = () => {
+  if (isExpanded) return;
+  window.overlay.expandWindow();
+  document.body.classList.add('expanded');
+  showChat();
+  isExpanded = true;
+}
+
+document.body.onmouseleave = () => {
+  document.body.classList.remove('expanded');
+  showSuggestions();
+  setTimeout(() => {
+    window.overlay.resetWindow();
+  }, 100);
+  isExpanded = false;
+}
+
+document.addEventListener("keydown", (e) => {
+  if (e.key === "Escape") {
+    document.body.classList.remove('expanded');
+    showSuggestions();
+    setTimeout(() => {
+      window.overlay.resetWindow();
+    }, 100);
+    isExpanded = false;
+  }
+});
+
 // DOM Elements
 const suggestionsContainer = document.getElementById("suggestions-container")!;
 const statusDot = document.getElementById("status-dot")!;
@@ -48,42 +107,97 @@ tabButtons.forEach((button) => {
 
 // Suggestion functions
 function createSuggestionCard(suggestion: SuggestionEvent): HTMLElement {
-  const card = document.createElement("div");
-  card.className = `suggestion-card ${suggestion.type}`;
+  const card = document.createElement("article");
+  card.className = `suggestion suggestion--${suggestion.type}`;
   card.dataset.timestamp = suggestion.timestamp.toString();
+  card.setAttribute("role", "article");
 
-  const contentHtml = suggestion.type === "link" 
-    ? `<a href="#" class="suggestion-link" data-url="${suggestion.content}">${suggestion.content}</a>`
-    : escapeHtml(suggestion.content);
+  const headingId = `suggestion-title-${suggestion.timestamp}`;
+  const isLink = suggestion.type === "link" || suggestion.type === "spotify";
 
-  const sourcesHtml = suggestion.sources?.length 
-    ? `<div class="suggestion-sources">Sources: ${suggestion.sources.join(", ")}</div>` 
+  const mediaHtml = isLink && suggestion.type === "spotify"
+    ? `<figure class="suggestion__media" aria-hidden="true"><img src="${escapeHtml(suggestion.content)}" alt="" /></figure>`
     : "";
 
-  card.innerHTML = `
-    <div class="suggestion-header">
-      <span class="suggestion-title">${escapeHtml(suggestion.title || "Suggestion")}</span>
-      <span class="suggestion-type">${suggestion.type}</span>
-    </div>
-    <div class="suggestion-content">${contentHtml}</div>
-    <div class="suggestion-why">${escapeHtml(suggestion.why)}</div>
-    ${sourcesHtml}
-    <div class="suggestion-footer">
-      <span class="suggestion-time">${formatTime(suggestion.timestamp)}</span>
-      <button class="dismiss-btn">Dismiss</button>
-    </div>
-  `;
+  if (isLink) {
+    // Link card: prominent title, small org/subtitle, big Open link pill and dismiss control.
+    card.innerHTML = `
+      ${mediaHtml}
+      <header class="suggestion__header">
+        <div class="suggestion__meta">
+          <h3 id="${headingId}" class="suggestion__title">${escapeHtml(suggestion.title || "Suggestion")}</h3>
+          <div class="suggestion__subtitle">${escapeHtml(
+            // prefer an explicit short subtitle/source; fall back to why or first source
+            suggestion.sources && suggestion.sources.length ? suggestion.sources[0] : (suggestion.why || "")
+          )}</div>
+        </div>
 
-  const link = card.querySelector(".suggestion-link");
-  if (link) {
-    link.addEventListener("click", (e) => {
-      e.preventDefault();
-      const url = (e.target as HTMLElement).dataset.url;
-      if (url) window.electronAPI.openExternal(url);
-    });
+        <div class="suggestion__actions">
+          <!-- keep a compact external icon for quick access (optional) -->
+          <button class="suggestion__external" type="button" aria-label="Open link in browser" data-url="${escapeHtml(suggestion.content)}">
+            <svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M14 3h7v7"/><path d="M21 3L10 14"/></svg>
+          </button>
+        </div>
+      </header>
+
+      <div class="suggestion__content" aria-labelledby="${headingId}">
+        <p>${escapeHtml(suggestion.content)}</p>
+      </div>
+
+      <footer class="suggestion__footer">
+        <div class="left-cta">
+          <button class="suggestion__open-btn" type="button" data-url="${escapeHtml(suggestion.content)}">
+            <span>Open link</span>
+            <span class="open-icon" aria-hidden="true">↗</span>
+          </button>
+        </div>
+        <div class="suggestion__controls">
+          <time class="suggestion__time" datetime="${new Date(suggestion.timestamp).toISOString()}">${formatTime(suggestion.timestamp)}</time>
+          <button class="suggestion__dismiss" type="button" aria-label="Dismiss suggestion">Dismiss</button>
+        </div>
+      </footer>
+    `;
+  } else {
+    // ...existing non-link card markup...
+    card.innerHTML = `
+      ${mediaHtml}
+      <header class="suggestion__header">
+        <div class="suggestion__meta">
+          <h3 id="${headingId}" class="suggestion__title">${escapeHtml(suggestion.title || "Suggestion")}</h3>
+          <div class="suggestion__subtitle">${escapeHtml(suggestion.why || "")}</div>
+        </div>
+        <div class="suggestion__actions">
+          ${suggestion.type === "spotify" ? `<button class="suggestion__external" type="button" aria-label="Open link in browser" data-url="${escapeHtml(suggestion.content)}">
+            <svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 3h7v7"/><path d="M21 3L10 14"/></svg>
+          </button>` : ``}
+        </div>
+      </header>
+
+      <div class="suggestion__content" aria-labelledby="${headingId}">
+        ${suggestion.type === "link" ? `<p class="suggestion__link"><a href="#" data-url="${escapeHtml(suggestion.content)}">${escapeHtml(suggestion.content)}</a></p>` : `<p>${escapeHtml(suggestion.content)}</p>`}
+      </div>
+
+      ${suggestion.sources && suggestion.sources.length ? `<div class="suggestion__sources">Sources: ${suggestion.sources.map(s => escapeHtml(s)).join(", ")}</div>` : ""}
+
+      <footer class="suggestion__footer">
+        <time class="suggestion__time" datetime="${new Date(suggestion.timestamp).toISOString()}">${formatTime(suggestion.timestamp)}</time>
+        <div class="suggestion__controls">
+          <button class="suggestion__dismiss" type="button" aria-label="Dismiss suggestion">Dismiss</button>
+        </div>
+      </footer>
+    `;
   }
 
-  card.querySelector(".dismiss-btn")?.addEventListener("click", () => {
+  // Wire up actions (open external / open pill)
+  const openBtns = card.querySelectorAll("[data-url]");
+  openBtns.forEach((el) => {
+    el.addEventListener("click", (e) => {
+      const url = (e.currentTarget as HTMLElement).getAttribute("data-url");
+      if (url) window.electronAPI.openExternal(url);
+    });
+  });
+
+  card.querySelector(".suggestion__dismiss")?.addEventListener("click", () => {
     window.electronAPI.dismissSuggestion(suggestion.timestamp);
     removeSuggestion(suggestion.timestamp);
   });
@@ -106,7 +220,7 @@ function removeSuggestion(timestamp: number): void {
 
 function renderSuggestions(): void {
   if (suggestions.length === 0) {
-    suggestionsContainer.innerHTML = `<div class="empty-state">No suggestions yet. Waiting for updates...</div>`;
+    // suggestionsContainer.innerHTML = `<div class="empty-state">No suggestions yet. Waiting for updates...</div>`;
     return;
   }
 

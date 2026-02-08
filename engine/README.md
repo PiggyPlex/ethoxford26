@@ -16,7 +16,7 @@ The project is organized into several directories:
   - **tools**: Contains various tools that the agents can use.
     - **index.ts**: Exports all tools available in the tools folder.
     - **weather.ts**: Fetches the current weather for a given city using the Open-Meteo API.
-    - **webSearch.ts**: Performs web searches using the DuckDuckGo Instant Answer API.
+    - **webSearch.ts**: Performs web searches using the LangSearch API and provides a visit_page tool for fetching page contents directly.
     - **fileTools.ts**: Provides file-related tools for interacting with the notes directory.
   - **utils**: Contains utility functions.
     - **safePath.ts**: Validates and resolves file paths within the notes folder.

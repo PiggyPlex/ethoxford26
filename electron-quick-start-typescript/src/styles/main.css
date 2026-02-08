@@ -1,0 +1,23 @@
+body {
+    /* pointer-events: none; */
+    background: transparent;
+}
+
+body.expanded {
+    background: #121212;
+}
+
+.interactive {
+    pointer-events: auto;
+}
+
+.titlebar {
+    height: 20px;
+    width: 100%;
+    background: #121212;
+    -webkit-app-region: drag;
+    a,
+    button {
+      -webkit-app-region: no-drag;
+    }
+}

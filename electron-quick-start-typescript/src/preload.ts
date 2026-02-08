@@ -1,4 +1,12 @@
 import { contextBridge, ipcRenderer } from "electron";
+import { expand } from "rxjs/dist/types";
+
+contextBridge.exposeInMainWorld("overlay", {
+  setInteractive: (value: boolean) =>
+    ipcRenderer.send("overlay:set-interactive", value),
+  expandWindow: () => ipcRenderer.send("expand-window"),
+  resetWindow: () => ipcRenderer.send("reset-window"),
+});
 
 contextBridge.exposeInMainWorld("electronAPI", {
   openExternal: (url: string) => ipcRenderer.send("open-external", url),

@@ -8,23 +8,35 @@ let isConnected = false;
 
 function createWindow() {
   mainWindow = new BrowserWindow({
-    width: 900,
-    height: 700,
+    x: 1200,
+    y: 0,
+    width: 400,
+    height: 400,
     webPreferences: {
       preload: path.join(__dirname, "preload.js"),
       contextIsolation: true,
       nodeIntegration: false,
     },
+    transparent: true,
+    frame: false,
+    alwaysOnTop: true,
+    skipTaskbar: true,
+    hasShadow: false,
+    fullscreenable: false,
   });
+
+  // mainWindow.setIgnoreMouseEvents(true, { forward: true });
 
   mainWindow.loadFile(path.join(__dirname, "../index.html"));
 
   mainWindow.on("closed", () => {
     mainWindow = null;
+    // Exit app
+    app.quit();
   });
 
   // Open the DevTools.
-  mainWindow.webContents.openDevTools();
+  // mainWindow.webContents.openDevTools();
 }
 
 function connectToSuggestionServer(serverUrl: string = "http://localhost:3001") {
@@ -83,6 +95,29 @@ function connectToSuggestionServer(serverUrl: string = "http://localhost:3001") 
 }
 
 // IPC Handlers
+ipcMain.on('expand-window', () => {
+  if (mainWindow) {
+    mainWindow.setSize(1200, 900);
+    mainWindow.center();
+    mainWindow.focus();
+  }
+});
+
+ipcMain.on('reset-window', () => {
+  console.log('reset window call')
+  if (mainWindow) {
+    mainWindow.setPosition(1050, 0);
+    mainWindow.setSize(400, 400);
+    // mainWindow.focus();
+    console.log("Window reset to original size and position");
+  }
+});
+
+// ipcMain.on("overlay:set-interactive", (_, interactive: boolean) => {
+//   mainWindow.setIgnoreMouseEvents(!interactive, { forward: true });
+//   if (interactive) mainWindow.focus();
+// });
+
 ipcMain.handle("get-connection-status", () => {
   return isConnected;
 });
