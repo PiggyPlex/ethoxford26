@@ -7,10 +7,12 @@ class SuggestionService {
   private suggestionSubject = new Subject<SuggestionEvent>();
   private connectionSubject = new Subject<boolean>();
 
-  public suggestions$: Observable<SuggestionEvent> = this.suggestionSubject.asObservable();
-  public connection$: Observable<boolean> = this.connectionSubject.asObservable();
+  public suggestions$: Observable<SuggestionEvent> =
+    this.suggestionSubject.asObservable();
+  public connection$: Observable<boolean> =
+    this.connectionSubject.asObservable();
 
-  connect(serverUrl: string = "http://localhost:3001"): void {
+  connect(serverUrl = "http://localhost:3001"): void {
     if (this.socket?.connected) {
       console.log("Already connected to suggestion server");
       return;
@@ -24,22 +26,22 @@ class SuggestionService {
     });
 
     this.socket.on("connect", () => {
-      console.log("🔌 Connected to suggestion server");
+      console.log("Connected to suggestion server");
       this.connectionSubject.next(true);
     });
 
     this.socket.on("disconnect", () => {
-      console.log("🔌 Disconnected from suggestion server");
+      console.log("Disconnected from suggestion server");
       this.connectionSubject.next(false);
     });
 
     this.socket.on("suggestion", (suggestion: SuggestionEvent) => {
-      console.log("📥 Received suggestion:", suggestion);
+      console.log("Received suggestion:", suggestion);
       this.suggestionSubject.next(suggestion);
     });
 
     this.socket.on("connect_error", (error) => {
-      console.error("❌ Connection error:", error.message);
+      console.error("Connection error:", error.message);
     });
   }
 

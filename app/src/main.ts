@@ -39,7 +39,7 @@ function createWindow() {
   // mainWindow.webContents.openDevTools();
 }
 
-function connectToSuggestionServer(serverUrl: string = "http://localhost:3001") {
+function connectToSuggestionServer(serverUrl = "http://localhost:3001") {
   if (socket?.connected) {
     console.log("Already connected to suggestion server");
     return;
@@ -64,33 +64,34 @@ function connectToSuggestionServer(serverUrl: string = "http://localhost:3001") 
     mainWindow?.webContents.send("connection-status", false);
   });
 
-  socket.on("suggestion", (suggestion: any) => {
-    console.log("📥 Received suggestion:", suggestion);
+  // TODO: types
+  socket.on("suggestion", (suggestion: SuggestionEvent) => {
+    console.log("Received suggestion:", suggestion);
     mainWindow?.webContents.send("suggestion", suggestion);
   });
 
   // Chat events
-  socket.on("chat:response", (message: any) => {
-    console.log("💬 Received chat response:", message);
+  socket.on("chat:response", (message: unknown) => {
+    console.log("Received chat response:", message);
     mainWindow?.webContents.send("chat:response", message);
   });
 
-  socket.on("chat:thinking", (event: any) => {
-    console.log("🧠 Received thinking:", event);
+  socket.on("chat:thinking", (event: unknown) => {
+    console.log("Received thinking:", event);
     mainWindow?.webContents.send("chat:thinking", event);
   });
 
-  socket.on("chat:tool", (event: any) => {
-    console.log("🔧 Received tool event:", event);
+  socket.on("chat:tool", (event: unknown) => {
+    console.log("Received tool event:", event);
     mainWindow?.webContents.send("chat:tool", event);
   });
 
-  socket.on("chat:typing", (event: any) => {
+  socket.on("chat:typing", (event: unknown) => {
     mainWindow?.webContents.send("chat:typing", event);
   });
 
   socket.on("connect_error", (error) => {
-    console.error("❌ Connection error:", error.message);
+    console.error("Connection error:", error.message);
   });
 }
 
@@ -131,7 +132,7 @@ ipcMain.on("dismiss-suggestion", (_event, timestamp: number) => {
 });
 
 // Chat IPC handler
-ipcMain.on("chat:send", (_event, message: any) => {
+ipcMain.on("chat:send", (_event, message: unknown) => {
   console.log("📤 Sending chat message:", message);
   if (socket?.connected) {
     socket.emit("chat:message", message);

@@ -57,17 +57,28 @@ document.addEventListener("keydown", (e) => {
   }
 });
 
+function assert(condition: unknown, msg = 'Assertion failed'): asserts condition {
+  if (!condition) {
+    throw new Error(msg);
+  }
+}
+
 // DOM Elements
-const suggestionsContainer = document.getElementById("suggestions-container")!;
-const statusDot = document.getElementById("status-dot")!;
-const statusText = document.getElementById("status-text")!;
+const suggestionsContainer = document.getElementById("suggestions-container");
+const statusDot = document.getElementById("status-dot");
+const statusText = document.getElementById("status-text");
 
 // Chat DOM Elements
-const chatMessages = document.getElementById("chat-messages")!;
+const chatMessages = document.getElementById("chat-messages");
 const chatInput = document.getElementById("chat-input") as HTMLTextAreaElement;
 const chatSendBtn = document.getElementById("chat-send-btn") as HTMLButtonElement;
 const tabButtons = document.querySelectorAll(".tab");
 const tabContents = document.querySelectorAll(".tab-content");
+
+assert(suggestionsContainer, "Missing suggestions container");
+assert(statusDot, "Missing status dot");
+assert(statusText, "Missing status text");
+assert(chatMessages, "Missing chat messages container");
 
 // State
 const suggestions: SuggestionEvent[] = [];
@@ -158,7 +169,6 @@ function createSuggestionCard(suggestion: SuggestionEvent): HTMLElement {
       </footer>
     `;
   } else {
-    // ...existing non-link card markup...
     card.innerHTML = `
       ${mediaHtml}
       <header class="suggestion__header">
@@ -347,7 +357,7 @@ function updateThinking(event: ThinkingEvent): void {
   
   const existingThinking = document.getElementById("current-thinking");
   if (existingThinking) {
-    existingThinking.querySelector(".thinking-text")!.textContent = event.thought;
+    existingThinking.querySelector(".thinking-text").textContent = event.thought;
   } else {
     renderChatMessages();
   }
