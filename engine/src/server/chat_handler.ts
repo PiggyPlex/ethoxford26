@@ -144,7 +144,7 @@ const handleChatMessage = (socket: Socket, message: ChatMessage): void => {
     });
 
     // Log the internal prompt for observability
-    yield* Effect.log(`📝 [Chat ${chatId}] Internal prompt:\n${prompt.slice(0, 300)}...`);
+    yield* Effect.log(`[Chat ${chatId}] Internal prompt:\n${prompt.slice(0, 300)}...`);
 
     try {
       // Use observeAgent for full observability
@@ -159,7 +159,7 @@ const handleChatMessage = (socket: Socket, message: ChatMessage): void => {
       }
       
       // Log completion
-      yield* Effect.log(`✅ [Chat ${chatId}] Agent completed with ${steps.length} steps`);
+      yield* Effect.log(`[Chat ${chatId}] Agent completed with ${steps.length} steps`);
       
       // Stop typing indicator
       yield* emitTyping(socket, false);
@@ -184,12 +184,12 @@ const handleChatMessage = (socket: Socket, message: ChatMessage): void => {
       // Emit the response
       yield* emitChatResponse(socket, assistantMessage);
       
-      yield* Effect.log(`📤 [Chat ${chatId}] Response sent: ${assistantMessage.content.slice(0, 100)}...`);
+      yield* Effect.log(`[Chat ${chatId}] Response sent: ${assistantMessage.content.slice(0, 100)}...`);
       
     } catch (error) {
       yield* emitTyping(socket, false);
       
-      yield* Effect.logError(`❌ [Chat ${chatId}] Error: ${error}`);
+      yield* Effect.logError(`[Chat ${chatId}] Error: ${error}`);
       
       const errorMessage: ChatMessage = {
         id: uuidv4(),
@@ -212,14 +212,14 @@ const handleChatMessage = (socket: Socket, message: ChatMessage): void => {
 // Clean up conversation history when socket disconnects
 export const cleanupConversation = (socketId: string): void => {
   conversationHistory.delete(socketId);
-  console.log(`🧹 Cleaned up conversation history for ${socketId}`);
+  console.log(`Cleaned up conversation history for ${socketId}`);
 };
 
 // Initialize the chat handler
 export const initChatHandler = (): Effect.Effect<void, never> =>
   Effect.sync(() => {
     setChatMessageHandler(handleChatMessage);
-    console.log("💬 Chat handler initialized with observeAgent");
+    console.log("Chat handler initialized with observeAgent");
   });
 
 // Get conversation history for a socket (useful for debugging)
@@ -230,5 +230,5 @@ export const getConversationHistory = (socketId: string): ChatMessage[] => {
 // Clear all conversation histories (useful for testing)
 export const clearAllConversations = (): void => {
   conversationHistory.clear();
-  console.log("🧹 Cleared all conversation histories");
+  console.log("Cleared all conversation histories");
 };

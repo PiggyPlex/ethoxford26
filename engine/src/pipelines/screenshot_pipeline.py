@@ -7,7 +7,6 @@ INPUT_IMAGE = "src/screenshot.png"
 OUTPUT_DIR = Path("src/segments")
 OCR_DIR = Path("src/ocr")
 
-# Tunables – adjust if needed
 MIN_AREA = 5000
 KERNEL_SIZE = (25, 25)
 PADDING = 8

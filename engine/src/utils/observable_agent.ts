@@ -2,7 +2,7 @@ import { Effect, Stream, Console, pipe, Layer, Context, Option, Chunk } from "ef
 import type { AgentAction, AgentFinish, AgentStep } from "@langchain/core/agents";
 import type { ReactAgent } from "langchain";
 
-// Types for agent execution steps
+// types for agent execution steps
 export interface AgentStepEvent {
   readonly _tag: "AgentStep";
   readonly action: AgentAction;
@@ -21,7 +21,7 @@ export interface AgentErrorEvent {
 
 export type AgentEvent = AgentStepEvent | AgentFinishEvent | AgentErrorEvent;
 
-// Service for observable agent
+// service for observable agent
 export class ObservableAgentService extends Context.Tag("ObservableAgentService")<
   ObservableAgentService,
   {
@@ -36,26 +36,27 @@ export class ObservableAgentService extends Context.Tag("ObservableAgentService"
   }
 >() {}
 
-// Create agent step event
+// create agent step event
 const createStepEvent = (step: AgentStep): AgentStepEvent => ({
   _tag: "AgentStep",
   action: step.action,
   observation: step.observation,
 });
 
-// Create agent finish event
+// create agent finish event
 const createFinishEvent = (output: Record<string, unknown>): AgentFinishEvent => ({
   _tag: "AgentFinish",
   output,
 });
 
-// Create error event
+// create error event
 const createErrorEvent = (error: unknown): AgentErrorEvent => ({
   _tag: "AgentError",
   error,
 });
 
-// Log agent event with structured logging
+// log agent event with structured logging
+// (needed for better observability)
 const logAgentEvent = (event: AgentEvent): Effect.Effect<void> =>
   Effect.gen(function* () {
     switch (event._tag) {
@@ -75,7 +76,7 @@ const logAgentEvent = (event: AgentEvent): Effect.Effect<void> =>
     }
   });
 
-// Stream agent execution with callbacks
+// stream agent execution with callbacks
 export const createObservableAgentStream = (
   agent: ReactAgent,
   input: string
@@ -132,7 +133,7 @@ export const createObservableAgentStream = (
     runAgent();
   });
 
-// Run agent and collect all events, returning final output
+// run agent and collect all events, returning final output
 export const runObservableAgent = (
   agent: ReactAgent,
   input: string
@@ -155,7 +156,7 @@ export const runObservableAgent = (
 
     return yield* Option.match(finishEvent, {
       onNone: () => {
-        // Log all events for debugging
+        // log all events for debugging
         const eventTags = Chunk.toReadonlyArray(events).map(e => e._tag);
         return Effect.fail(new Error(`Agent did not produce a final output. Events: ${eventTags.join(", ")}`));
       },
@@ -163,7 +164,7 @@ export const runObservableAgent = (
     });
   });
 
-// Live implementation of the service
+// live implementation of the service
 export const ObservableAgentServiceLive = Layer.succeed(
   ObservableAgentService,
   {
@@ -172,7 +173,7 @@ export const ObservableAgentServiceLive = Layer.succeed(
   }
 );
 
-// Convenience function to run with logging each step as a generator
+// convenience function to run with logging each step as a generator
 export const observeAgent = (
   agent: ReactAgent,
   input: string
@@ -210,6 +211,6 @@ export const observeAgent = (
     return { steps, result };
   });
 
-// Export for direct usage with Effect.runPromise
+// export for direct usage with Effect.runPromise
 export const runAgent = (agent: ReactAgent, input: string) =>
   Effect.runPromise(runObservableAgent(agent, input));

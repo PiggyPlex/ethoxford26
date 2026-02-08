@@ -22,7 +22,7 @@ export const suggestContentTool = tool(
         }
         console.log(`Why: ${why}`);
 
-        // Emit suggestion via Socket.IO
+        // emit suggestion to socket.io
         const suggestion: SuggestionEvent = {
             type,
             content,

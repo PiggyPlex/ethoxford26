@@ -1,7 +1,6 @@
 import { Effect, pipe, Schema, Data, Console } from "effect";
 import { tool } from "langchain";
 import { openWindows } from "get-windows";
-import { z } from "zod";
 
 export const getWindows = tool(
     async () => {

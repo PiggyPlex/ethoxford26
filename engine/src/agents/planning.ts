@@ -16,7 +16,7 @@ const llm = new ChatGoogleGenerativeAI({
 
 const client = new MultiServerMCPClient({  
   googleCalendar: {
-    transport: "stdio",  // Local subprocess communication
+    transport: "stdio",
     command: "bunx",
     args: ["@cocal/google-calendar-mcp"],
     env: {

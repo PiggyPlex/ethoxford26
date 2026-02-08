@@ -3,7 +3,7 @@ import { tool } from "langchain";
 import { Effect, pipe } from "effect";
 import type { LangSearchResponse } from "../types";
 
-const LANGSEARCH_API_URL = "https://api.langsearch.com/v1/web-search";
+const LANGSEARCH_API_URL = "https://api.langsearch.com/v1/web-search" as const satisfies string;
 
 export const webSearch = tool(
   async ({ query, freshness = "noLimit", summary = true, count = 5 }) => {

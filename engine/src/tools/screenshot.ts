@@ -1,4 +1,4 @@
-import { Effect, pipe, Schema, Data, Console } from "effect";
+import { Effect, pipe, Schema, Data, Console, Schedule } from "effect";
 import { planningAgent } from "agents/planning";
 import sd from 'screenshot-desktop';
 import { writeFile } from "node:fs/promises";
@@ -8,10 +8,6 @@ import { promisify } from "node:util";
 import { tool } from "langchain";
 
 const execAsync = promisify(exec);
-
-// ============================================================================
-// Error Models - using Data.TaggedEnum for better DX
-// ============================================================================
 
 class AgentInvocationError extends Data.TaggedError("AgentInvocationError")<{
   readonly cause: unknown;
@@ -36,19 +32,12 @@ class JsonParseError extends Data.TaggedError("JsonParseError")<{
   readonly rawOutput: string;
 }> {}
 
-// ============================================================================
-// Domain Schemas
-// ============================================================================
-
-// Define your expected vision pipeline output schema
+// vision pipeline output schema
 const VisionResult = Schema.Array(Schema.String);
 
 type VisionResult = typeof VisionResult.Type;
 
-// ============================================================================
-// Service Layer - using Effect generators
-// ============================================================================
-
+// service layer (effect generators)
 /**
  * Invoke planning agent
  */
@@ -202,10 +191,7 @@ const screenshotPipeline = Effect.gen(function* () {
   return visionResult;
 });
 
-// ============================================================================
-// Alternative: Pipe-based version (more functional)
-// ============================================================================
-
+// fp pipeline alternatives
 const screenshotPipelinePipe = pipe(
   takeScreenshot,
   Effect.flatMap((img) =>
@@ -223,12 +209,6 @@ const screenshotPipelinePipe = pipe(
   )
 );
 
-// ============================================================================
-// Error Recovery & Retry
-// ============================================================================
-
-import { Schedule } from "effect";
-
 const screenshotPipelineWithRetry = pipe(
   screenshotPipeline,
   Effect.retry(
@@ -239,8 +219,8 @@ const screenshotPipelineWithRetry = pipe(
   Effect.catchTags({
     ScreenshotError: (error) =>
       Effect.gen(function* () {
-        yield* Effect.logError("Screenshot failed, using fallback");
-        // Could return a default/mock result here
+        yield* Effect.logError("Screenshot failed");
+        // TODO: attempt alternative parsing strategies
         return Effect.fail(error);
       }),
     JsonParseError: (error) =>
@@ -248,15 +228,11 @@ const screenshotPipelineWithRetry = pipe(
         yield* Effect.logError(
           `Failed to parse JSON. Raw output:\n${error.rawOutput}`
         );
-        // Could attempt alternative parsing strategies
+        // TODO: attempt alternative parsing strategies
         return Effect.fail(error);
       }),
   })
 );
-
-// ============================================================================
-// Running the Pipeline
-// ============================================================================
 
 /**
  * Main execution with comprehensive error handling
@@ -278,7 +254,7 @@ const main = Effect.gen(function* () {
   return result;
 });
 
-// Run with proper error handling
+// run with error handling via catchAll
 const runnable = pipe(
   main,
   Effect.catchAll((error) =>
@@ -290,6 +266,7 @@ const runnable = pipe(
   )
 );
 
+// export tool
 export const screenshotTool = tool(
     async () => {
         return Effect.runPromise(screenshotPipeline);

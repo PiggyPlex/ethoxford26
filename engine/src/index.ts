@@ -80,34 +80,34 @@ const longTermPlanningStage = createStage<string, void>(
 const shortTermPlanningPipeline = chain(shortTermSummaryStage, shortTermPlanningStage);
 const longTermPlanningPipeline = chain(longTermSummaryStage, longTermPlanningStage);
 
-// Handler for logging agent events with colors
+// Handler for logging agent events
 const handleAgentEvent = (agentName: string) => (event: AgentEvent) =>
   Effect.gen(function* () {
     const timestamp = new Date().toISOString();
     switch (event._tag) {
       case "AgentStep":
-        yield* Effect.log(`[${timestamp}] [${agentName}] 🔧 Tool: ${event.action.tool}`);
-        yield* Effect.log(`[${timestamp}] [${agentName}] 📥 Input: ${JSON.stringify(event.action.toolInput).slice(0, 200)}...`);
+        yield* Effect.log(`[${timestamp}] [${agentName}] Tool: ${event.action.tool}`);
+        yield* Effect.log(`[${timestamp}] [${agentName}] Input: ${JSON.stringify(event.action.toolInput).slice(0, 200)}...`);
         if (event.observation !== "pending...") {
-          yield* Effect.log(`[${timestamp}] [${agentName}] 📤 Observation:`, event.observation);
+          yield* Effect.log(`[${timestamp}] [${agentName}] Observation:`, event.observation);
         }
         break;
       case "AgentFinish":
-        yield* Effect.log(`[${timestamp}] [${agentName}] ✅ Completed: ${JSON.stringify(event.output).slice(0, 300)}`);
+        yield* Effect.log(`[${timestamp}] [${agentName}] Completed: ${JSON.stringify(event.output).slice(0, 300)}`);
         break;
       case "AgentError":
-        yield* Effect.logError(`[${timestamp}] [${agentName}] ❌ Error: ${String(event.error)}`);
+        yield* Effect.logError(`[${timestamp}] [${agentName}] Error: ${String(event.error)}`);
         break;
     }
   });
 
 // Run context agent with observable streaming
 const runContextAgentWithLogging = Effect.gen(function* () {
-  yield* Effect.log("🔍 Starting context capture...");
+  yield* Effect.log("Starting context capture...");
   
   const { steps, result } = yield* observeAgent(screenshotContextAgent, CONTEXT_PROMPT);
   
-  yield* Effect.log(`📊 Context capture completed with ${steps.length} steps`);
+  yield* Effect.log(`Context capture completed with ${steps.length} steps`);
   return result;
 }).pipe(
   Effect.catchAll((error) =>
@@ -120,13 +120,13 @@ const runContextAgentWithLogging = Effect.gen(function* () {
 
 // Run short-term planning pipeline (last 2 snapshots)
 const runShortTermPlanningPipeline = Effect.gen(function* () {
-  yield* Effect.log("⚡ Starting short-term planner (last 2 snapshots)...");
+  yield* Effect.log("Starting short-term planner (last 2 snapshots)...");
   yield* Effect.log("   Phase 1: Generating user summary from recent activity");
   yield* Effect.log("   Phase 2: Immediate proactive planning & assistance");
   
   const result = yield* shortTermPlanningPipeline(undefined);
   
-  yield* Effect.log(`⚡ Short-term planner completed - ${result.steps.length} total steps`);
+  yield* Effect.log(`Short-term planner completed - ${result.steps.length} total steps`);
   return result;
 }).pipe(
   Effect.catchAll((error) =>
@@ -139,13 +139,13 @@ const runShortTermPlanningPipeline = Effect.gen(function* () {
 
 // Run long-term planning pipeline (last 6 snapshots)
 const runLongTermPlanningPipeline = Effect.gen(function* () {
-  yield* Effect.log("🧠 Starting long-term planner (last 6 snapshots)...");
+  yield* Effect.log("Starting long-term planner (last 6 snapshots)...");
   yield* Effect.log("   Phase 1: Generating comprehensive user summary");
   yield* Effect.log("   Phase 2: Strategic proactive planning & assistance");
   
   const result = yield* longTermPlanningPipeline(undefined);
   
-  yield* Effect.log(`🧠 Long-term planner completed - ${result.steps.length} total steps`);
+  yield* Effect.log(`Long-term planner completed - ${result.steps.length} total steps`);
   return result;
 }).pipe(
   Effect.catchAll((error) =>
@@ -160,18 +160,18 @@ const runLongTermPlanningPipeline = Effect.gen(function* () {
 const program = Effect.gen(function* () {
   // Initialize Socket.IO server
   const io = yield* initSocketServer(3001);
-  yield* Effect.log("✅ Socket.IO server initialized on port 3001");
+  yield* Effect.log("Socket.IO server initialized on port 3001");
 
   // Initialize HTTP server with Express
   const httpApp = createHttpServer();
   const HTTP_PORT = process.env.HTTP_PORT || 3002;
   httpApp.listen(HTTP_PORT, () => {
-    console.log(`✅ HTTP server listening on port ${HTTP_PORT}`);
+    console.log(`HTTP server listening on port ${HTTP_PORT}`);
   });
 
   // Initialize chat handler
   yield* initChatHandler();
-  yield* Effect.log("✅ Chat handler initialized");
+  yield* Effect.log("Chat handler initialized");
 
   // Set up cleanup on socket disconnect
   io.on("connection", (socket) => {
@@ -182,26 +182,26 @@ const program = Effect.gen(function* () {
 
   // Connect to database
   yield* connectToDatabase();
-  yield* Effect.log("✅ Database connected");
+  yield* Effect.log("Database connected");
 
   // Context capture task (every 30 secs)
   const contextTask = pipe(
     runContextAgentWithLogging,
-    Effect.tap(() => Effect.log("🔄 Context capture cycle completed")),
+    Effect.tap(() => Effect.log("Context capture cycle completed")),
     Effect.repeat(Schedule.spaced(CONTEXT_INTERVAL))
   );
 
   // Short-term planner task (every 1 min) - uses last 2 snapshots
   const shortTermPlannerTask = pipe(
     runShortTermPlanningPipeline,
-    Effect.tap(() => Effect.log("🔄 Short-term planner cycle completed")),
+    Effect.tap(() => Effect.log("Short-term planner cycle completed")),
     Effect.repeat(Schedule.spaced(SHORT_TERM_PLANNER_INTERVAL))
   );
 
   // Long-term planner task (every 2 mins) - uses last 6 snapshots
   const longTermPlannerTask = pipe(
     runLongTermPlanningPipeline,
-    Effect.tap(() => Effect.log("🔄 Long-term planner cycle completed")),
+    Effect.tap(() => Effect.log("Long-term planner cycle completed")),
     Effect.repeat(Schedule.spaced(LONG_TERM_PLANNER_INTERVAL))
   );
 
@@ -210,12 +210,12 @@ const program = Effect.gen(function* () {
   const shortTermFiber = yield* Effect.fork(shortTermPlannerTask);
   const longTermFiber = yield* Effect.fork(longTermPlannerTask);
 
-  yield* Effect.log(`🚀 Background agents started`);
-  yield* Effect.log(`   📸 Context agent: every ${Duration.toMillis(CONTEXT_INTERVAL) / 60000} mins`);
-  yield* Effect.log(`   ⚡ Short-term planner (2 snapshots): every ${Duration.toMillis(SHORT_TERM_PLANNER_INTERVAL) / 60000} mins`);
-  yield* Effect.log(`   🧠 Long-term planner (6 snapshots): every ${Duration.toMillis(LONG_TERM_PLANNER_INTERVAL) / 60000} mins`);
-  yield* Effect.log(`   💬 Chat gateway: ready on ws://localhost:3001`);
-  yield* Effect.log(`   🌐 HTTP API: ready on http://localhost:${HTTP_PORT}`);
+  yield* Effect.log(`Background agents started`);
+  yield* Effect.log(`   Context agent: every ${Duration.toMillis(CONTEXT_INTERVAL) / 60000} mins`);
+  yield* Effect.log(`   Short-term planner (2 snapshots): every ${Duration.toMillis(SHORT_TERM_PLANNER_INTERVAL) / 60000} mins`);
+  yield* Effect.log(`   Long-term planner (6 snapshots): every ${Duration.toMillis(LONG_TERM_PLANNER_INTERVAL) / 60000} mins`);
+  yield* Effect.log(`   Chat gateway: ready on ws://localhost:3001`);
+  yield* Effect.log(`   HTTP API: ready on http://localhost:${HTTP_PORT}`);
 
   // Keep fibers alive - wait for all (they run forever due to repeat)
   yield* Fiber.join(longTermFiber);

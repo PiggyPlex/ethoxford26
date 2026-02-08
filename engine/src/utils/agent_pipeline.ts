@@ -2,14 +2,14 @@ import { Effect, pipe, Option } from "effect";
 import type { ReactAgent } from "langchain";
 import { observeAgent, type AgentFinishEvent, type AgentStepEvent } from "./observable_agent";
 
-// Generic agent result type
+// generic agent result type
 export interface AgentResult<T = Record<string, unknown>> {
   readonly steps: ReadonlyArray<AgentStepEvent>;
   readonly result: AgentFinishEvent;
   readonly data: T;
 }
 
-// Pipeline stage definition
+// pipeline stage definition
 export interface PipelineStage<TInput, TOutput> {
   readonly name: string;
   readonly agent: ReactAgent;
@@ -17,7 +17,7 @@ export interface PipelineStage<TInput, TOutput> {
   readonly extractOutput: (result: AgentFinishEvent) => TOutput;
 }
 
-// Create a pipeline stage
+// create a pipeline stage
 export const createStage = <TInput, TOutput>(
   name: string,
   agent: ReactAgent,
@@ -30,7 +30,7 @@ export const createStage = <TInput, TOutput>(
   extractOutput,
 });
 
-// Run a single pipeline stage
+// run a single pipeline stage
 export const runStage = <TInput, TOutput>(
   stage: PipelineStage<TInput, TOutput>,
   input: TInput
@@ -42,42 +42,42 @@ export const runStage = <TInput, TOutput>(
     const { steps, result } = yield* observeAgent(stage.agent, prompt);
     const data = stage.extractOutput(result);
     
-    yield* Effect.log(`✅ [${stage.name}] Completed with ${steps.length} steps`);
+    yield* Effect.log(`[${stage.name}] Completed with ${steps.length} steps`);
     
     return { steps, result, data };
   });
 
-// Chain two pipeline stages
+// chain two pipeline stages
 export const chain = <A, B, C>(
   first: PipelineStage<A, B>,
   second: PipelineStage<B, C>
 ): ((input: A) => Effect.Effect<AgentResult<C>, Error>) =>
   (input: A) =>
     Effect.gen(function* () {
-      yield* Effect.log(`🔗 Chaining stages: ${first.name} → ${second.name}`);
-      yield* Effect.log(`▶️ Run first stage: ${first.name}`);
+      yield* Effect.log(`Chaining stages: ${first.name} → ${second.name}`);
+      yield* Effect.log(`Run first stage: ${first.name}`);
       
       const firstResult = yield* runStage(first, input).pipe(
         Effect.tapError((error) => 
-          Effect.log(`❌ First stage failed: ${error}`)
+          Effect.log(`First stage failed: ${error}`)
         )
       );
       
-      yield* Effect.log(`✅ First stage completed. Output type: ${typeof firstResult.data}`);
-      yield* Effect.log(`📦 First stage data: ${JSON.stringify(firstResult.data).slice(0, 200)}...`);
-      yield* Effect.log(`▶️ Run second stage: ${second.name}`);
+      yield* Effect.log(`First stage completed. Output type: ${typeof firstResult.data}`);
+      yield* Effect.log(`First stage data: ${JSON.stringify(firstResult.data).slice(0, 200)}...`);
+      yield* Effect.log(`Run second stage: ${second.name}`);
       
       const secondResult = yield* runStage(second, firstResult.data).pipe(
         Effect.tapError((error) => 
-          Effect.log(`❌ Second stage failed: ${error}`)
+          Effect.log(`Second stage failed: ${error}`)
         )
       );
       
-      yield* Effect.log(`✅ Second stage completed. Output: ${JSON.stringify(secondResult.data)}`);
+      yield* Effect.log(`Second stage completed. Output: ${JSON.stringify(secondResult.data)}`);
       return secondResult;
     });
 
-// Chain multiple stages sequentially
+// chain multiple stages together sequentially
 export const pipeline = <TInput>(
   ...stages: PipelineStage<any, any>[]
 ): ((input: TInput) => Effect.Effect<AgentResult<unknown>, Error>) =>
@@ -98,7 +98,7 @@ export const pipeline = <TInput>(
       return lastResult;
     });
 
-// Run stage with optional fallback
+// run stage with optional fallback
 export const runStageWithFallback = <TInput, TOutput>(
   stage: PipelineStage<TInput, TOutput>,
   input: TInput,

@@ -3,7 +3,7 @@ import { Effect } from "effect";
 
 const NOTES_DIR = path.resolve(__dirname, "../../notes");
 
-// Helper to validate and resolve path within notes folder
+// validate and resolve path within notes folder
 export const safePath = (filename: string): Effect.Effect<string, Error> => {
   return Effect.try({
     try: () => {
