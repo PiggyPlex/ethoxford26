@@ -3,7 +3,7 @@ import { screenshotContextAgent } from "agents/screenshot_context";
 import { summaryContextAgent } from "agents/summary_context_agent";
 import { planningAgent } from "agents/planning";
 import { connectToDatabase } from './utils/mongodb';
-import { 
+import {
   observeAgent,
   type AgentEvent,
   type AgentFinishEvent
@@ -11,6 +11,7 @@ import {
 import { createStage, runStage, chain } from './utils/agent_pipeline';
 import { initSocketServer } from './server/socket';
 import { initChatHandler, cleanupConversation } from './server/chat_handler';
+import { createHttpServer } from './server/http.js';
 
 const CONTEXT_INTERVAL = Duration.minutes(1);
 const SHORT_TERM_PLANNER_INTERVAL = Duration.minutes(5);
@@ -161,6 +162,13 @@ const program = Effect.gen(function* () {
   const io = yield* initSocketServer(3001);
   yield* Effect.log("✅ Socket.IO server initialized on port 3001");
 
+  // Initialize HTTP server with Express
+  const httpApp = createHttpServer();
+  const HTTP_PORT = process.env.HTTP_PORT || 3002;
+  httpApp.listen(HTTP_PORT, () => {
+    console.log(`✅ HTTP server listening on port ${HTTP_PORT}`);
+  });
+
   // Initialize chat handler
   yield* initChatHandler();
   yield* Effect.log("✅ Chat handler initialized");
@@ -207,6 +215,7 @@ const program = Effect.gen(function* () {
   yield* Effect.log(`   ⚡ Short-term planner (2 snapshots): every ${Duration.toMillis(SHORT_TERM_PLANNER_INTERVAL) / 60000} mins`);
   yield* Effect.log(`   🧠 Long-term planner (6 snapshots): every ${Duration.toMillis(LONG_TERM_PLANNER_INTERVAL) / 60000} mins`);
   yield* Effect.log(`   💬 Chat gateway: ready on ws://localhost:3001`);
+  yield* Effect.log(`   🌐 HTTP API: ready on http://localhost:${HTTP_PORT}`);
 
   // Keep fibers alive - wait for all (they run forever due to repeat)
   yield* Fiber.join(longTermFiber);
