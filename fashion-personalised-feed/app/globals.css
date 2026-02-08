@@ -1,0 +1,234 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer utilities {
+  .text-balance {
+    text-wrap: balance;
+  }
+
+  .line-clamp-1 {
+    display: -webkit-box;
+    -webkit-line-clamp: 1;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+}
+
+/* ── Stacked notification cards (Sonner-style — stacks downward) ────── */
+.notification-stack-card {
+  --scale-increment: 0.03;
+  --translate-increment: 8px;
+  --opacity-increment: 0.12;
+  transform: scale(calc(1 - var(--index) * var(--scale-increment)))
+    translateY(calc(var(--index) * var(--translate-increment)));
+  opacity: calc(1 - var(--index) * var(--opacity-increment));
+  width: 356px;
+}
+
+/* Slide-in animation for the whole stack */
+@keyframes stack-in {
+  from {
+    opacity: 0;
+    transform: translateX(40px) scale(0.96);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0) scale(1);
+  }
+}
+
+.animate-stack-in {
+  animation: stack-in 0.5s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+/* Thin scrollbar for expanded notification list */
+.notification-scroll {
+  scrollbar-width: thin;
+  scrollbar-color: hsl(var(--border)) transparent;
+}
+.notification-scroll::-webkit-scrollbar {
+  width: 4px;
+}
+.notification-scroll::-webkit-scrollbar-track {
+  background: transparent;
+}
+.notification-scroll::-webkit-scrollbar-thumb {
+  background-color: hsl(var(--border));
+  border-radius: 9999px;
+}
+
+/* Hidden scrollbar — still scrollable */
+.scrollbar-hide {
+  scrollbar-width: none;
+}
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;
+}
+
+@layer base {
+  :root {
+    --background: 0 0% 100%;
+    --foreground: 220 13% 18%;
+    --card: 0 0% 100%;
+    --card-foreground: 220 13% 18%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 220 13% 18%;
+    --primary: 0 0% 15%;
+    --primary-foreground: 0 0% 100%;
+    --secondary: 0 0% 96%;
+    --secondary-foreground: 0 0% 15%;
+    --muted: 0 0% 96%;
+    --muted-foreground: 0 0% 45%;
+    --accent: 0 0% 96%;
+    --accent-foreground: 0 0% 15%;
+    --destructive: 0 84.2% 60.2%;
+    --destructive-foreground: 0 0% 98%;
+    --border: 214 32% 91%;
+    --input: 214 32% 91%;
+    --ring: 0 0% 15%;
+    --radius: 0.75rem;
+
+    --chart-1: 217 91% 60%;
+    --chart-2: 142 71% 45%;
+    --chart-3: 25 95% 53%;
+    --chart-4: 271 91% 65%;
+    --chart-5: 0 84% 60%;
+
+    --sidebar-background: 0 0% 98%;
+    --sidebar-foreground: 240 5.3% 26.1%;
+    --sidebar-primary: 240 5.9% 10%;
+    --sidebar-primary-foreground: 0 0% 98%;
+    --sidebar-accent: 240 4.8% 95.9%;
+    --sidebar-accent-foreground: 240 5.9% 10%;
+    --sidebar-border: 220 13% 91%;
+    --sidebar-ring: 217.2 91.2% 59.8%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+  body {
+    @apply bg-background text-foreground;
+  }
+}
+
+/* ── Chat markdown — compact prose for chat bubbles ────────────────── */
+.chat-markdown > *:first-child {
+  margin-top: 0 !important;
+}
+.chat-markdown > *:last-child {
+  margin-bottom: 0 !important;
+}
+
+.chat-markdown p {
+  margin: 0.35em 0;
+}
+
+.chat-markdown h1,
+.chat-markdown h2,
+.chat-markdown h3,
+.chat-markdown h4 {
+  font-weight: 600;
+  margin: 0.6em 0 0.25em;
+  line-height: 1.35;
+}
+.chat-markdown h1 { font-size: 1.05em; }
+.chat-markdown h2 { font-size: 1em; }
+.chat-markdown h3 { font-size: 0.95em; }
+
+.chat-markdown strong {
+  font-weight: 600;
+}
+
+.chat-markdown em {
+  font-style: italic;
+}
+
+.chat-markdown ul,
+.chat-markdown ol {
+  margin: 0.35em 0;
+  padding-left: 1.4em;
+}
+.chat-markdown ul { list-style-type: disc; }
+.chat-markdown ol { list-style-type: decimal; }
+.chat-markdown li {
+  margin: 0.15em 0;
+}
+.chat-markdown li > p {
+  margin: 0;
+}
+
+.chat-markdown blockquote {
+  margin: 0.5em 0;
+  padding: 0.15em 0.75em;
+  border-left: 3px solid hsl(var(--primary) / 0.4);
+  color: hsl(var(--muted-foreground));
+  font-style: italic;
+}
+
+.chat-markdown code {
+  font-size: 0.85em;
+  padding: 0.15em 0.35em;
+  border-radius: 4px;
+  background: hsl(var(--muted));
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+}
+
+.chat-markdown pre {
+  margin: 0.5em 0;
+  padding: 0.6em 0.8em;
+  border-radius: 8px;
+  background: hsl(var(--muted));
+  overflow-x: auto;
+}
+.chat-markdown pre code {
+  padding: 0;
+  background: none;
+  font-size: 0.8em;
+}
+
+.chat-markdown hr {
+  margin: 0.6em 0;
+  border: none;
+  border-top: 1px solid hsl(var(--border));
+}
+
+.chat-markdown a {
+  color: hsl(var(--primary));
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.chat-markdown table {
+  margin: 0.5em 0;
+  border-collapse: collapse;
+  font-size: 0.85em;
+  width: 100%;
+}
+.chat-markdown th,
+.chat-markdown td {
+  border: 1px solid hsl(var(--border));
+  padding: 0.3em 0.5em;
+  text-align: left;
+}
+.chat-markdown th {
+  font-weight: 600;
+  background: hsl(var(--muted));
+}
+
+/* ── Urgency shimmer animation ─────────────────────────────────────────────── */
+@keyframes urgency-shimmer {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.5;
+  }
+}
+
+.animate-urgency-shimmer {
+  animation: urgency-shimmer 2s ease-in-out infinite;
+}
